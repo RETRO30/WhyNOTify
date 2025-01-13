@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: admin_service
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./database:/app/database  # Общий модуль database
+      - ./utils:/app/utils
+    depends_on:
+      - database
+
+  notifications:
+    build:
+      context: ./notifications
+      dockerfile: Dockerfile
+    container_name: notifications_service
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./database:/app/database  # Общий модуль database
+      - ./utils:/app/utils
+    depends_on:
+      - database
+
+  database:
+    image: postgres:17
+    container_name: postgres_db
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
