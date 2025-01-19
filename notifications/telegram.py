@@ -7,6 +7,7 @@ from utils.logger import logger
 from utils.config import Config
 from database.models import Account, Proxy
 from notifications.schemas import AuthData
+from notifications.schemas import Response, Status, Description
 
 
 def prepare_proxy(proxy: Proxy) -> dict:
@@ -24,7 +25,7 @@ class TelegramApi:
         self.account: Account = account
         self.tg_client: TelegramClient | None = None
 
-    async def setup_client(self):
+    async def setup_client(self) -> Response:
         if self.tg_client is None:
             try:
                 self.tg_client = TelegramClient(session_string=self.account.session,
@@ -32,12 +33,12 @@ class TelegramApi:
                                                 api_hash=Config.telegram_api.hash,
                                                 proxy=prepare_proxy(self.account.proxy),
                                                 in_memory=True)
-                return 0
+                return Response(Status.SUCCESS, Description.OK)
             except Exception as e:
                 logger.error(f"{self.account} | Error setting up Telegram client: {e}")
-                return -1
+                return Response(Status.ERROR, Description.ERROR_SETTING_UP_TELEGRAM_CLIENT)
 
-    async def get_auth_data(self, bot_tag: str, url: str) -> AuthData | int:
+    async def get_auth_data(self, bot_tag: str, url: str) -> Response:
         if self.account.session is None:
             logger.error(f"{self.account} | Account not logged in")
             return -1
@@ -54,10 +55,9 @@ class TelegramApi:
                 ))
 
             auth_url = web_view.url
-
+            auth_data = AuthData(unquote(string=unquote(string=auth_url.split('tgWebAppData=')[1].split('&tgWebAppVersion')[0])), datetime.now() + timedelta(minutes=45))
             await self.client.disconnect()
-
-            return AuthData(unquote(string=unquote(string=auth_url.split('tgWebAppData=')[1].split('&tgWebAppVersion')[0])), datetime.now() + timedelta(minutes=45))
+            return Response(Status.SUCCESS, Description.OK, data=auth_data)
         except Exception as e:
             logger.error(f"{self.account} | Error getting auth data: {e}")
-            return -1
+            return Response(Status.ERROR, Description.INVALID_RESPONSE, data=e)

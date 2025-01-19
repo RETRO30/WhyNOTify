@@ -3,10 +3,9 @@ version: "3.9"
 services:
   admin:
     build:
-      context: ./admin
+      context: admin
       dockerfile: Dockerfile
     container_name: admin_service
-    restart: always
     env_file:
       - .env
     volumes:
@@ -14,13 +13,13 @@ services:
       - ./utils:/app/utils
     depends_on:
       - database
+      - migrations
 
   notifications:
     build:
-      context: ./notifications
+      context: notifications
       dockerfile: Dockerfile
     container_name: notifications_service
-    restart: always
     env_file:
       - .env
     volumes:
@@ -28,6 +27,7 @@ services:
       - ./utils:/app/utils
     depends_on:
       - database
+      - migrations
 
   database:
     image: postgres:17
@@ -37,6 +37,21 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  migrations:
+    build:
+      context: migrations
+      dockerfile: Dockerfile
+    container_name: migrations_service
+    env_file:
+      - .env
+    volumes:
+      - ./database:/app/database
+      - ./utils:/app/utils
+    depends_on:
+      - database
 
 volumes:
   postgres_data:

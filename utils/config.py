@@ -21,8 +21,9 @@ class TelegramAPI:
 
 @dataclass(frozen=True, slots=True)
 class TelegramBot:
-    token: str
-    admins: List[str, int]
+    admin_token: str
+    admins: List[str]
+    notification_token: str
 
 
 @dataclass(slots=True)
@@ -52,8 +53,9 @@ def setup_config():
             hash=env.str("API_HASH")
         ),
         telegram_bot=TelegramBot(
-            token=env.str("BOT_TOKEN"),
-            admins=env.list("ADMIN_IDS")
+            admin_token=env.str("ADMIN_BOT_TOKEN"),
+            admins=env.list("ADMIN_IDS"),
+            notification_token=env.str("NOTIFICATION_BOT_TOKEN")
         )
     )
     return config

@@ -2,16 +2,15 @@
 FROM python:3.12
 
 # Устанавливаем рабочую директорию
-WORKDIR /app
+WORKDIR /notifications
 
-# Копируем зависимости
 COPY requirements.txt .
 
 # Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
-COPY . .
+COPY . ./notifications
 
 # Запускаем приложение
-CMD ["python", "main.py"]
+CMD ["python", "notifications/main.py"]
