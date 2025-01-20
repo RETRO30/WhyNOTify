@@ -199,8 +199,50 @@ class Channel(Base):
             await session.commit()
 
 
+class Stickerpack(Base):
+    __tablename__ = "stickerpacks"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    pack_id = Column(String(100), nullable=False)
+    type = Column(Enum(ChannelType), nullable=False)
+
+    def __str__(self):
+        return f"Stickerpack(pack_id={self.pack_id})"
+
+    def __repr__(self):
+        return f"Stickerpack(pack_id={self.pack_id})"
+
+    @staticmethod
+    async def add(name: str, pack_id: str, type: ChannelType):
+        async with async_session() as session:
+            new_pack = Stickerpack(name=name, pack_id=pack_id, type=type)
+            session.add(new_pack)
+            await session.commit()
+            return new_pack
+
+    @staticmethod
+    async def get_by_id(id: int):
+        async with async_session() as session:
+            pack = await session.scalar(select(Stickerpack).where(Stickerpack.id == id))
+            return pack
+
+    @staticmethod
+    async def get_all():
+        async with async_session() as session:
+            packs = await session.scalars(select(Stickerpack).order_by(Stickerpack.id))
+            return packs
+
+    @staticmethod
+    async def delete_by_id(id: int):
+        async with async_session() as session:
+            pack = await session.scalar(select(Stickerpack).where(Stickerpack.id == id))
+            await session.delete(pack)
+            await session.commit()
+
+
 class CollectionType(enum.Enum):
     STICKERS = "stickers"
+    STICERPACKS = "stickerpacks"
 
 
 class Collection(Base):
@@ -210,6 +252,7 @@ class Collection(Base):
     new_json = Column(JSON, nullable=False)
     update_json = Column(JSON, nullable=False)
     current_json = Column(JSON, nullable=False)
+    additional_data = Column(String(100), nullable=True)
     type = Column(Enum(CollectionType), nullable=False)
 
     def __repr__(self):
@@ -219,10 +262,14 @@ class Collection(Base):
         return f"Collections(id={self.id})"
 
     @staticmethod
-    async def add(new_json: list, update_json: list, current_json: list, type: CollectionType):
+    async def add(new_json: list, update_json: list, current_json: list, type: CollectionType, additional_data: str = ""):
         async with async_session() as session:
-            last_collection = await session.scalar(select(Collection).where(Collection.type == type).order_by(Collection.id.desc()).limit(1))            
-            new_collection = Collection(new_json=new_json, update_json=update_json, current_json=current_json, type=type)
+            last_collection = await session.scalar(select(Collection).where(Collection.type == type).order_by(Collection.id.desc()).limit(1))
+            new_collection = Collection(new_json=new_json,
+                                        update_json=update_json,
+                                        current_json=current_json,
+                                        type=type,
+                                        additional_data=additional_data)
             if len(new_json) > 0 or len(update_json) > 0 or last_collection is None:
                 session.add(new_collection)
                 await session.commit()
@@ -241,7 +288,12 @@ class Collection(Base):
             return collections
 
     @staticmethod
-    async def get_last(type: CollectionType):
+    async def get_last(type: CollectionType, addtional_data: str = ""):
         async with async_session() as session:
+            if addtional_data is not None:
+                collection = await session.scalar(
+                    select(Collection).where(Collection.type == type).where(Collection.additional_data == addtional_data).order_by(
+                        Collection.id.desc()).limit(1))
+                return collection
             collection = await session.scalar(select(Collection).where(Collection.type == type).order_by(Collection.id.desc()).limit(1))
             return collection

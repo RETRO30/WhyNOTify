@@ -37,7 +37,7 @@ async def handle_admin_panel(callback: CallbackQuery):
     await callback.message.edit_text(await main_menu_text(), reply_markup=await admin_panel_keyboard())
 
 
-# Обработчик кнопок пагинации
+# Обработчик аккаунтов
 @dp.callback_query(lambda c: c.data.startswith("accounts:"))
 async def handle_pagination(callback: CallbackQuery):
     page = int(callback.data.split(":")[1])
@@ -211,6 +211,48 @@ async def handle_channels_input(message: Message, state: FSMContext):
     await message.answer("Added channels:", reply_markup=await generate_channel_buttons())
     await state.clear()
 
+
+@dp.callback_query(lambda c: c.data.startswith("stickerpacks:"))
+async def handle_stickerpacks(callback: CallbackQuery):
+    page = int(callback.data.split(":")[1])
+    await callback.message.edit_text("Stickerpacks:", reply_markup=await generate_stickerpack_buttons(page=page))
+    
+
+@dp.callback_query(lambda c: c.data.startswith("stickerpack:"))
+async def handle_stickerpack_selection(callback: CallbackQuery):
+    stickerpack_id = int(callback.data.split(":")[1])
+    stickerpack: Stickerpack = await Stickerpack.get_by_id(stickerpack_id)
+    await callback.message.edit_text(f"Stickerpack: {stickerpack.name}\nId: {stickerpack.stickerpack_id}", reply_markup=await stickerpack_keyboard(stickerpack))
+    
+@dp.callback_query(lambda c: c.data.startswith("delete_stickerpack:"))
+async def handle_delete_stickerpack(callback: CallbackQuery):
+    stickerpack_id = int(callback.data.split(":")[1])
+    await Stickerpack.delete_by_id(stickerpack_id)
+    await callback.answer("Stickerpack deleted", show_alert=True)
+    
+class AddStickerpacksStates(StatesGroup):
+    waiting_for_stickerpacks_data = State()
+    
+@dp.callback_query(lambda c: c.data.startswith("add_stickerpacks"))
+async def handle_add_stickerpack(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer("Send text with stickerpacks in format: name:stickerpack_id")
+    await state.set_state(AddStickerpacksStates.waiting_for_stickerpacks_data)
+    
+@dp.message(AddStickerpacksStates.waiting_for_stickerpacks_data)
+async def handle_stickerpacks_input(message: Message, state: FSMContext):
+    stickerpacks_data = message.text.strip()
+    stickerpacks = stickerpacks_data.split("\n")
+    count = 0
+    try:
+        for stickerpack in stickerpacks:
+            name, stickerpack_id = stickerpack.split(":")
+            try:
+                await Stickerpack.add(name, stickerpack_id)
+                count += 1
+            except Exception as e:
+                logger.warning(f"Error processing stickerpack: {str(e)}")
+    except Exception as e:
+        await message.answer(f"Error processing stickerpacks: {str(e)}")
 
 async def main():
     try:

@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import Message
 from typing import Tuple
 
-from database.models import Account, AccountStatus, ChannelType, Proxy, Channel
+from database.models import Account, AccountStatus, ChannelType, Proxy, Channel, Stickerpack
 
 async def main_menu_text():
     count_accounts = await Account.get_total_count()
@@ -120,7 +120,41 @@ async def generate_channel_buttons(page: int = 1):
     # Добавляем кнопку "Add channels"
     keyboard.row(InlineKeyboardButton(text="Add channels", callback_data="add_channels"))
     keyboard.row(InlineKeyboardButton(text="Back", callback_data="admin_panel"))
-    return keyboard.as_markup() 
+    return keyboard.as_markup()
+
+
+async def generate_stickerpack_buttons(page: int = 1):
+    STICKERPACKS_PER_PAGE = 5  # Количество стикерпаков на страницу
+    stickerpacks: Tuple[Stickerpack] = await Stickerpack.get_all()
+    if stickerpacks:
+        stickerpacks = list(stickerpacks)
+    else:
+        stickerpacks = []
+        
+    start_index = (page - 1) * STICKERPACKS_PER_PAGE
+    end_index = start_index + STICKERPACKS_PER_PAGE
+    page_stickerpacks = stickerpacks[start_index:end_index]
+    
+    keyboard = InlineKeyboardBuilder()
+    for stickerpack in page_stickerpacks:
+        keyboard.row(InlineKeyboardButton(text=stickerpack.name, callback_data=f"stickerpack:{stickerpack.id}"))
+        
+    # Добавляем кнопки пагинации
+    if page > 1:
+        keyboard.row(InlineKeyboardButton(text="⬅️", callback_data=f"stickerpacks:{page - 1}"))
+    if end_index < len(stickerpacks):
+        keyboard.row(InlineKeyboardButton(text="➡️", callback_data=f"stickerpacks:{page + 1}"))
+    # Добавляем кнопку "Add stickerpacks"
+    keyboard.row(InlineKeyboardButton(text="Add stickerpacks", callback_data="add_stickerpacks"))
+    keyboard.row(InlineKeyboardButton(text="Back", callback_data="admin_panel"))
+    return keyboard.as_markup()
+
+
+async def stickerpack_keyboard(stickerpack: Stickerpack):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(InlineKeyboardButton(text="Delete", callback_data=f"delete_stickerpack:{stickerpack.id}"))
+    keyboard.row(InlineKeyboardButton(text="Back", callback_data="stickerpacks:1"))
+    return keyboard.as_markup()
 
 
 async def account_text(account: Account):

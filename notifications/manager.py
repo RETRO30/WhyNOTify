@@ -1,8 +1,8 @@
 import asyncio
 from collections import deque
 from datetime import datetime
-from typing import List
-from database.models import Account, Collection, CollectionType
+from typing import List, Tuple
+from database.models import Account, Collection, CollectionType, Stickerpack
 from notifications.stickers import Stickers
 from notifications.bot import send_messages, send_tech_messages, send_tech_collections_message
 from notifications.schemas import Response, Status, Description
@@ -26,7 +26,7 @@ class Worker:
             logger.success(f"{self.account} | Stickers setup successful")
             return response
         
-    async def task(self):
+    async def task_stickers(self):
         global first_check
         last_collection = await Collection.get_last(type=CollectionType.STICKERS)
         
@@ -42,6 +42,42 @@ class Worker:
             if first_check:
                 await send_tech_collections_message(collection=response.data)
                 first_check = False
+            return response
+        
+        stickerpacks: Tuple[Stickerpack] | None = await Stickerpack.get_all()
+        
+        if stickerpacks is None:
+            return Response(Status.SUCCESS, Description.OK)
+        for stickerpack in stickerpacks:
+            last_collection = await Collection.get_last(type=CollectionType.STICKERPACKS, addtional_data=str(stickerpack.pack_id))
+            
+            response: Response = await self.stickers.check_update_stickerpacks(last_collections=last_collection)
+            
+            if response.status == Status.ERROR:
+                await send_tech_messages(f"{self.account} | Error checking updates stickerpacks: {response.description}")
+                logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
+                return response
+            
+            if response.status == Status.SUCCESS:
+                await send_messages(collection=response.data)
+                if first_check:
+                    await send_tech_collections_message(collection=response.data)
+                    first_check = False
+                return response
+        
+    async def task_stickerpacks(self):
+        pass
+    
+    async def task(self):
+        response: Response = await self.task_stickers()
+        if response.status == Status.ERROR:
+            return response
+        
+        response: Response = await self.task_stickerpacks()
+        if response.status == Status.ERROR:
+            return response
+        
+        if response.status == Status.SUCCESS:
             return response
             
             

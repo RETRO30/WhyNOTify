@@ -108,6 +108,30 @@ class StickersApi:
             logger.error(f"{self.account} | Error getting collections: {response.status_code}, {response.text}")
             await send_tech_messages(f"{self.account} | Error getting collections: {response.status_code}, {response.text}")
             return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(response.text))
+        
+        
+    async def get_stickerpacks(self, id: int):
+        if self.http_session is None:
+            logger.error(f"{self.account} HTTP session is not set up")
+            await send_tech_messages(f"{self.account} | HTTP session is not set up")
+            return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION)
+        url = f"{self.BASE_URL}/collection/{id}"
+        headers = self.headers
+        response = await self.http_session.get(url, headers=headers)
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                if data["ok"]:
+                    logger.success(f"{self.account} | Stickerpacks by {id} received successfully {len(data['data'])}")
+                    return Response(Status.SUCCESS, Description.OK, data["data"]["characters"])
+            except Exception as e:
+                logger.error(f"{self.account} | Error getting stickerpacks: {e}")
+                await send_tech_messages(f"{self.account} | Error getting stickerpacks: {e}")
+                return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
+        else:
+            logger.error(f"{self.account} | Error getting stickerpacks: {response.status_code}, {response.text}")
+            await send_tech_messages(f"{self.account} | Error getting stickerpacks: {response.status_code}, {response.text}")
+            return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(response.text))
 
 
 class Stickers:
@@ -179,7 +203,35 @@ class Stickers:
                 if last_collection["id"] == collection["id"]:
                     if last_collection != collection:
                         update.append(collection)
+                        
 
         db_collection = await Collection.add(new_json=new, update_json=update, current_json=collections, type=CollectionType.STICKERS)
 
+        return Response(Status.SUCCESS, Description.OK, data=db_collection)
+    
+    async def check_update_stickerpacks(self, id: int, last_collections: Collection | None) -> Response:
+        new = []
+        update = []
+        
+        response: Response = await self.api.get_stickerpacks(id=id)
+        if response.status == Status.ERROR:
+            return response
+        if last_collections is None:
+            db_collection = await Collection.add(new_json=new, update_json=update, current_json=response.data, type=CollectionType.STICKERPACKS, additional_data=str(id))
+            return Response(Status.SUCCESS, Description.OK, data=db_collection)
+        stickerpacks = response.data
+        if stickerpacks is None:
+            await send_tech_messages(f"{self.account} | Stickerpacks is None")
+            return Response(Status.ERROR, Description.INVALID_RESPONSE)
+        
+        if last_collections.type != CollectionType.STICKERPACKS:
+            return Response(Status.ERROR, Description.INVALID_COLLECTION_TYPE)
+        
+        current_ids = [stickerpack["id"] for stickerpack in stickerpacks]
+        last_ids = [stickerpack["id"] for stickerpack in last_collections.current_json]
+        
+        if len(current_ids) > len(last_ids):
+            new = [stickerpack for stickerpack in stickerpacks if stickerpack["id"] not in last_ids]
+
+        db_collection = await Collection.add(new_json=new, update_json=update, current_json=stickerpacks, type=CollectionType.STICKERPACKS, additional_data=str(id))
         return Response(Status.SUCCESS, Description.OK, data=db_collection)
