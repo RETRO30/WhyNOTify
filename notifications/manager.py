@@ -62,7 +62,8 @@ class WorkerManager:
         """
         accounts = await Account.get_all_active()  # Предполагаемый метод получения аккаунтов
         current_time = datetime.now()
-        
+        if not accounts:
+            return
         for account in accounts:
             if account not in self.account_queue:
                 # Проверяем, не находится ли аккаунт в кулдауне
