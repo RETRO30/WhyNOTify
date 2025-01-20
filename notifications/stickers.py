@@ -94,9 +94,12 @@ class StickersApi:
                 if data["ok"]:
                     logger.success(f"{self.account} | Collections received successfully {len(data['data'])}")
                     return Response(Status.SUCCESS, Description.OK, data["data"])
+                elif not data["ok"] and data["errorCode"] == "invalid_auth_token":
+                    return Response(Status.ERROR, Description.SESSION_EXPIRED)
                 else:
                     logger.error(f"{self.account} | Error getting collections: {data}")
-                    return Response(Status.ERROR, Description.SESSION_EXPIRED)
+                    await send_tech_messages(f"{self.account} | Error getting collections: {data}")
+                    return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(data))
             except Exception as e:
                 logger.error(f"{self.account} | Error getting collections: {e}")
                 await send_tech_messages(f"{self.account} | Error getting collections: {e}")
