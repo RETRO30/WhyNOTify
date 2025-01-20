@@ -33,6 +33,7 @@ services:
     image: postgres:17
     container_name: postgres_db
     restart: always
+    user: postgres
     env_file:
       - .env
     volumes:
