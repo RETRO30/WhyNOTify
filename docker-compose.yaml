@@ -55,7 +55,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./migrations:/app/migrations
+      - migrations_data:/app/migrations/versions
       - ./database:/app/database
       - ./utils:/app/utils
     depends_on:
@@ -64,3 +64,4 @@ services:
 
 volumes:
   postgres_data:
+  migrations_data:
