@@ -290,7 +290,7 @@ class Collection(Base):
     @staticmethod
     async def get_last(type: CollectionType, addtional_data: str = ""):
         async with async_session() as session:
-            if addtional_data is not None:
+            if addtional_data != "":
                 collection = await session.scalar(
                     select(Collection).where(Collection.type == type).where(Collection.additional_data == addtional_data).order_by(
                         Collection.id.desc()).limit(1))
