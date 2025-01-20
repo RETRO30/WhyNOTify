@@ -39,6 +39,12 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: /usr/bin/pg_isready
+      start_period: 5s
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   migrations:
     build:
@@ -52,7 +58,8 @@ services:
       - ./database:/app/database
       - ./utils:/app/utils
     depends_on:
-      - database
+      database:
+        condition: service_healthy
 
 volumes:
   postgres_data:
