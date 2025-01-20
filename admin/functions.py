@@ -127,7 +127,7 @@ async def account_text(account: Account):
     proxy: Proxy = await Proxy.get_by_account(account)
     if proxy is None:
         return f"Account: {account.phone_number}\nStatus: {account.status}"
-    return f"Account: {account.phone_number}\nStatus: {account.status}\n Proxy: {proxy.scheme}://{proxy.username}:{proxy.password}@{proxy.hostname}:{proxy.port}"
+    return f"Account: {account.phone_number}\nStatus: {account.status}\nProxy: {proxy.scheme}://{proxy.username}:{proxy.password}@{proxy.hostname}:{proxy.port}"
 
 
 async def account_keyboard(account: Account):
@@ -146,7 +146,6 @@ async def channel_keyboard(channel: Channel):
 
 async def admin_panel_keyboard():
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(InlineKeyboardButton(text="Statistics", callback_data="statistics"))
     keyboard.row(InlineKeyboardButton(text="Channels", callback_data="channels:1"))
     keyboard.row(InlineKeyboardButton(text="Accounts", callback_data="accounts:1"))
     return keyboard.as_markup()

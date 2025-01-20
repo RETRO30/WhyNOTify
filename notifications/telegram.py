@@ -3,6 +3,7 @@ from pyrogram import Client as TelegramClient
 from pyrogram.raw.functions.messages import RequestWebView
 from datetime import datetime, timedelta
 
+from notifications.bot import send_tech_messages
 from utils.logger import logger
 from utils.config import Config
 from database.models import Account, Proxy
@@ -28,10 +29,12 @@ class TelegramApi:
     async def setup_client(self) -> Response:
         if self.tg_client is None:
             try:
-                self.tg_client = TelegramClient(session_string=self.account.session,
+                proxy = await Proxy.get_by_account(self.account)
+                self.tg_client = TelegramClient(name=self.account.phone_number,
+                                                session_string=self.account.telegram_session,
                                                 api_id=Config.telegram_api.id,
                                                 api_hash=Config.telegram_api.hash,
-                                                proxy=prepare_proxy(self.account.proxy),
+                                                proxy=prepare_proxy(proxy=proxy),
                                                 in_memory=True)
                 return Response(Status.SUCCESS, Description.OK)
             except Exception as e:
@@ -39,11 +42,11 @@ class TelegramApi:
                 return Response(Status.ERROR, Description.ERROR_SETTING_UP_TELEGRAM_CLIENT)
 
     async def get_auth_data(self, bot_tag: str, url: str) -> Response:
-        if self.account.session is None:
+        if self.account.telegram_session is None:
             logger.error(f"{self.account} | Account not logged in")
             return -1
         try:
-            self.tg_client.connect()
+            await self.tg_client.connect()
 
             web_view = await self.tg_client.invoke(
                 RequestWebView(
@@ -56,8 +59,9 @@ class TelegramApi:
 
             auth_url = web_view.url
             auth_data = AuthData(unquote(string=unquote(string=auth_url.split('tgWebAppData=')[1].split('&tgWebAppVersion')[0])), datetime.now() + timedelta(minutes=45))
-            await self.client.disconnect()
+            await self.tg_client.disconnect()
             return Response(Status.SUCCESS, Description.OK, data=auth_data)
         except Exception as e:
             logger.error(f"{self.account} | Error getting auth data: {e}")
+            await send_tech_messages(f"{self.account} | Error getting auth data: {e}")
             return Response(Status.ERROR, Description.INVALID_RESPONSE, data=e)

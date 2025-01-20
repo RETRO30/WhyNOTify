@@ -125,6 +125,7 @@ class Proxy(Base):
     @staticmethod
     async def get_by_account(account: Account):
         async with async_session() as session:
+            account = await session.merge(account)
             proxy = await session.scalar(select(Proxy).where(Proxy.account == account))
             return proxy
 
@@ -144,7 +145,7 @@ class Proxy(Base):
 
 class ChannelType(enum.Enum):
     STICKERS = "stickers"
-    TECHNICAL_STICKERS = "technical_stickers"
+    TECHNICAL = "technical"
 
 
 class Channel(Base):
@@ -202,7 +203,7 @@ class CollectionType(enum.Enum):
     STICKERS = "stickers"
 
 
-class Collections(Base):
+class Collection(Base):
     __tablename__ = "collections"
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -218,27 +219,29 @@ class Collections(Base):
         return f"Collections(id={self.id})"
 
     @staticmethod
-    async def add(new_json: dict, update_json: dict, current_json: dict, type: CollectionType):
+    async def add(new_json: list, update_json: list, current_json: list, type: CollectionType):
         async with async_session() as session:
-            new_collection = Collections(new_json=new_json, update_json=update_json, current_json=current_json, type=type)
-            session.add(new_collection)
-            await session.commit()
+            last_collection = await session.scalar(select(Collection).where(Collection.type == type).order_by(Collection.id.desc()).limit(1))            
+            new_collection = Collection(new_json=new_json, update_json=update_json, current_json=current_json, type=type)
+            if len(new_json) > 0 or len(update_json) > 0 or last_collection is None:
+                session.add(new_collection)
+                await session.commit()
             return new_collection
 
     @staticmethod
     async def get_by_id(id: int):
         async with async_session() as session:
-            collection = await session.scalar(select(Collections).where(Collections.id == id))
+            collection = await session.scalar(select(Collection).where(Collection.id == id))
             return collection
 
     @staticmethod
     async def get_all():
         async with async_session() as session:
-            collections = await session.scalars(select(Collections).order_by(Collections.id))
+            collections = await session.scalars(select(Collection).order_by(Collection.id))
             return collections
 
     @staticmethod
     async def get_last(type: CollectionType):
         async with async_session() as session:
-            collection = await session.scalar(select(Collections).where(Collections.type == type).order_by(Collections.id.desc()).limit(1))
+            collection = await session.scalar(select(Collection).where(Collection.type == type).order_by(Collection.id.desc()).limit(1))
             return collection

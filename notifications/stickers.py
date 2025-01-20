@@ -1,9 +1,10 @@
 from httpx import AsyncClient as HttpAsyncClient
 
+from notifications.bot import send_tech_messages
 from utils.logger import logger
 from utils.config import Config
-from database.models import Account, Proxy, Collections, CollectionType
-from notifications.schemas import ParsedData, Response, Status, Description, AuthData
+from database.models import Account, Proxy, Collection, CollectionType
+from notifications.schemas import Response, Status, Description, AuthData
 from telegram import TelegramApi
 
 def get_proxy_string(proxy: Proxy) -> str:
@@ -41,16 +42,19 @@ class StickersApi:
         """
         if self.http_session is None:
             try:
-                self.http_session = HttpAsyncClient(proxy=get_proxy_string(self.account.proxy))
+                proxy = await Proxy.get_by_account(self.account)
+                self.http_session = HttpAsyncClient(proxy=get_proxy_string(proxy))
             except Exception as e:
                 logger.error(f"{self.account} | Error setting up HTTP session: {e}")
-                return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION)
+                await send_tech_messages(f"{self.account} | Error setting up HTTP session: {e}")
+                return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION, data=str(e))
         return Response(Status.SUCCESS, Description.OK)
 
     async def auth(self, auth_data: AuthData) -> Response:
         if self.http_session is None:
             logger.error(f"{self.account} HTTP session is not set up")
-            return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION)
+            await send_tech_messages(f"{self.account} | HTTP session is not set up")
+            return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION, data=str(e))
         url = f"{self.BASE_URL}/auth"
         body = auth_data.data
         headers = self.headers
@@ -66,9 +70,11 @@ class StickersApi:
                     return Response(Status.ERROR, Description.SESSION_EXPIRED)
             except Exception as e:
                 logger.error(f"{self.account} | Error getting auth data: {e}")
+                await send_tech_messages(f"{self.account} | Error getting auth data: {e}")
                 return Response(Status.ERROR, Description.INVALID_RESPONSE)
         else:
             logger.error(f"{self.account} | Error getting auth data: {response.status_code}, {response.text}")
+            await send_tech_messages(f"{self.account} | Error getting auth data: {response.status_code}, {response.text}")
             return Response(Status.ERROR, Description.INVALID_RESPONSE)
         
         
@@ -76,6 +82,7 @@ class StickersApi:
     async def get_collections(self):
         if self.http_session is None:
             logger.error(f"{self.account} HTTP session is not set up")
+            await send_tech_messages(f"{self.account} | HTTP session is not set up")
             return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION)
         url = f"{self.BASE_URL}/collections"
         headers = self.headers
@@ -84,15 +91,19 @@ class StickersApi:
             try:
                 data = response.json()
                 if data["ok"]:
+                    logger.success(f"{self.account} | Collections received successfully {len(data['data'])}")
                     return Response(Status.SUCCESS, Description.OK, data["data"])
                 else:
+                    logger.error(f"{self.account} | Error getting collections: {data}")
                     return Response(Status.ERROR, Description.SESSION_EXPIRED)
             except Exception as e:
                 logger.error(f"{self.account} | Error getting collections: {e}")
-                return Response(Status.ERROR, Description.INVALID_RESPONSE)
+                await send_tech_messages(f"{self.account} | Error getting collections: {e}")
+                return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
         else:
             logger.error(f"{self.account} | Error getting collections: {response.status_code}, {response.text}")
-            return Response(Status.ERROR, Description.INVALID_RESPONSE)
+            await send_tech_messages(f"{self.account} | Error getting collections: {response.status_code}, {response.text}")
+            return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(response.text))
         
         
 class Stickers:
@@ -102,10 +113,9 @@ class Stickers:
         self.telegram_api = TelegramApi(account)
         self.bot_tag = "sticker_bot"
         self.webapp_url = "https://stickerdom.store/"
-        self.auth_data: AuthData | None = None
         
     async def setup(self):
-        response: Response = self.api.http_session_setup()
+        response: Response = await self.api.http_session_setup()
         if response.status == Status.ERROR:
             return response
         response: Response = await self.telegram_api.setup_client()
@@ -118,49 +128,57 @@ class Stickers:
         
         auth_data: AuthData = response.data
         if auth_data is None:
+            logger.error(f"{self.account} | Auth data is None")
+            await send_tech_messages(f"{self.account} | Auth data is None")
             return Response(Status.ERROR, Description.INVALID_RESPONSE)
         
-        if not auth_data.valid():
+        if not await auth_data.valid():
+            logger.error(f"{self.account} | Auth data is invalid")
             return Response(Status.ERROR, Description.SESSION_EXPIRED)
         
         auth_data: AuthData = response.data
         
         response: Response = await self.api.auth(auth_data=auth_data)
         if response.status == Status.ERROR:
-            return response      
+            return response
+        return Response(Status.SUCCESS, Description.OK)   
         
         
-    async def check_updates(self, last_collection: Collections) -> Response:
-        if self.auth_data is None:
-            return Response(Status.ERROR, Description.SESSION_EXPIRED)
-        if not self.auth_data.valid():
-            return Response(Status.ERROR, Description.SESSION_EXPIRED)
-        if last_collection.type != CollectionType.STICKERS:
-            return Response(Status.ERROR, Description.INVALID_COLLECTION_TYPE)
+    async def check_updates(self, last_collections: Collection | None) -> Response:
+        new = []
+        update = []
+        
         response: Response = await self.api.get_collections()
         if response.status == Status.ERROR:
             return response
         
         collections = response.data
         if collections is None:
+            await send_tech_messages(f"{self.account} | Collections is None")
             return Response(Status.ERROR, Description.INVALID_RESPONSE)
         
-        new = []
-        update = []
+        if last_collections is None:
+            db_collection = await Collection.add(new_json=new, update_json=update, current_json=collections, type=CollectionType.STICKERS)
+            return Response(Status.SUCCESS, Description.OK, data=db_collection)
+        
+        if last_collections.type != CollectionType.STICKERS:
+            return Response(Status.ERROR, Description.INVALID_COLLECTION_TYPE)
         
         current_ids = [collection["id"] for collection in collections]
-        last_ids = [collection["id"] for collection in last_collection.current_json]
+        last_ids = [collection["id"] for collection in last_collections.current_json]
         
         if len(current_ids) > len(last_ids):
             new = [collection for collection in collections if collection["id"] not in last_ids]
         
-        for last_collection in last_collection.current_json:
+        for last_collection in last_collections.current_json:
             for collection in collections:
                 if last_collection["id"] == collection["id"]:
-                    if last_collection["data"] != collection["data"]:
+                    if last_collection != collection:
                         update.append(collection)
+                        
+        db_collection = await Collection.add(new_json=new, update_json=update, current_json=collections, type=CollectionType.STICKERS)
         
-        return Response(Status.SUCCESS, Description.OK, data={"new": new, "update": update, "current": collections})
+        return Response(Status.SUCCESS, Description.OK, data=db_collection)
             
             
             
