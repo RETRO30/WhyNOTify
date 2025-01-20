@@ -7,15 +7,18 @@ from database.models import Account, Proxy, Collection, CollectionType
 from notifications.schemas import Response, Status, Description, AuthData
 from telegram import TelegramApi
 
+
 def get_proxy_string(proxy: Proxy) -> str:
     return f"{proxy.scheme}://{proxy.username}:{proxy.password}@{proxy.hostname}:{proxy.port}"
 
+
 class StickersApi:
+
     def __init__(self, account: Account):
         self.account: Account = account
         self.http_session = None
         self.BASE_URL = "https://api.stickerdom.store/api/v1"
-        self.headers =  {
+        self.headers = {
             "accept": "application/json",
             "accept-language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7",
             "cache-control": "no-cache",
@@ -76,8 +79,6 @@ class StickersApi:
             logger.error(f"{self.account} | Error getting auth data: {response.status_code}, {response.text}")
             await send_tech_messages(f"{self.account} | Error getting auth data: {response.status_code}, {response.text}")
             return Response(Status.ERROR, Description.INVALID_RESPONSE)
-        
-        
 
     async def get_collections(self):
         if self.http_session is None:
@@ -104,16 +105,17 @@ class StickersApi:
             logger.error(f"{self.account} | Error getting collections: {response.status_code}, {response.text}")
             await send_tech_messages(f"{self.account} | Error getting collections: {response.status_code}, {response.text}")
             return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(response.text))
-        
-        
+
+
 class Stickers:
+
     def __init__(self, account: Account):
         self.account: Account = account
         self.api = StickersApi(account)
         self.telegram_api = TelegramApi(account)
         self.bot_tag = "sticker_bot"
         self.webapp_url = "https://stickerdom.store/"
-        
+
     async def setup(self):
         response: Response = await self.api.http_session_setup()
         if response.status == Status.ERROR:
@@ -121,67 +123,60 @@ class Stickers:
         response: Response = await self.telegram_api.setup_client()
         if response.status == Status.ERROR:
             return response
-        
+
         response: Response = await self.telegram_api.get_auth_data(bot_tag=self.bot_tag, url=self.webapp_url)
         if response.status == Status.ERROR:
             return response
-        
+
         auth_data: AuthData = response.data
         if auth_data is None:
             logger.error(f"{self.account} | Auth data is None")
             await send_tech_messages(f"{self.account} | Auth data is None")
             return Response(Status.ERROR, Description.INVALID_RESPONSE)
-        
+
         if not await auth_data.valid():
             logger.error(f"{self.account} | Auth data is invalid")
             return Response(Status.ERROR, Description.SESSION_EXPIRED)
-        
+
         auth_data: AuthData = response.data
-        
+
         response: Response = await self.api.auth(auth_data=auth_data)
         if response.status == Status.ERROR:
             return response
-        return Response(Status.SUCCESS, Description.OK)   
-        
-        
+        return Response(Status.SUCCESS, Description.OK)
+
     async def check_updates(self, last_collections: Collection | None) -> Response:
         new = []
         update = []
-        
+
         response: Response = await self.api.get_collections()
         if response.status == Status.ERROR:
             return response
-        
+
         collections = response.data
         if collections is None:
             await send_tech_messages(f"{self.account} | Collections is None")
             return Response(Status.ERROR, Description.INVALID_RESPONSE)
-        
+
         if last_collections is None:
             db_collection = await Collection.add(new_json=new, update_json=update, current_json=collections, type=CollectionType.STICKERS)
             return Response(Status.SUCCESS, Description.OK, data=db_collection)
-        
+
         if last_collections.type != CollectionType.STICKERS:
             return Response(Status.ERROR, Description.INVALID_COLLECTION_TYPE)
-        
+
         current_ids = [collection["id"] for collection in collections]
         last_ids = [collection["id"] for collection in last_collections.current_json]
-        
+
         if len(current_ids) > len(last_ids):
             new = [collection for collection in collections if collection["id"] not in last_ids]
-        
+
         for last_collection in last_collections.current_json:
             for collection in collections:
                 if last_collection["id"] == collection["id"]:
                     if last_collection != collection:
                         update.append(collection)
-                        
+
         db_collection = await Collection.add(new_json=new, update_json=update, current_json=collections, type=CollectionType.STICKERS)
-        
+
         return Response(Status.SUCCESS, Description.OK, data=db_collection)
-            
-            
-            
-        
-    
-        
