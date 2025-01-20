@@ -36,14 +36,13 @@ class Worker:
             await send_tech_messages(f"{self.account} | Error checking updates: {response.description}")
             logger.error(f"{self.account} | Error checking updates: {response.description}")
             return response
+        await send_messages(collection=response.data)
+        if first_check:
+            await send_tech_collections_message(collection=response.data)
+            first_check = False
+        return response
         
-        if response.status == Status.SUCCESS:
-            await send_messages(collection=response.data)
-            if first_check:
-                await send_tech_collections_message(collection=response.data)
-                first_check = False
-            return response
-        
+    async def task_stickerpacks(self):
         stickerpacks: Tuple[Stickerpack] | None = await Stickerpack.get_all()
         
         if stickerpacks is None:
@@ -57,16 +56,13 @@ class Worker:
                 await send_tech_messages(f"{self.account} | Error checking updates stickerpacks: {response.description}")
                 logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
                 return response
-            
-            if response.status == Status.SUCCESS:
-                await send_messages(collection=response.data)
-                if first_check:
-                    await send_tech_collections_message(collection=response.data)
-                    first_check = False
-                return response
+            await send_messages(collection=response.data)
+            if first_check:
+                await send_tech_collections_message(collection=response.data)
+                first_check = False
+            return response
+                
         
-    async def task_stickerpacks(self):
-        pass
     
     async def task(self):
         response: Response = await self.task_stickers()

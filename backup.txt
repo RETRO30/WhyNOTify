@@ -1,0 +1,4 @@
+docker compose exec database pg_dump -U postgres Notify > backup.sql
+
+
+cat backup.sql | docker compose exec -T database psql -U postgres -d Notify
