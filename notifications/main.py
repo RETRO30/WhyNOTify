@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from notifications.manager import WorkerManager
 from utils.config import Config
 from utils.logger import logger
@@ -12,8 +13,9 @@ async def main():
         worker_manager = WorkerManager()
         await worker_manager.start()
     except Exception as e:
-        logger.error(f"Error: {e}")
-        await send_tech_messages(f"Error: {e}")
+        logger.error(f"Error: {str(e)}")
+        logger.debug(traceback.format_exc())
+        await send_tech_messages(f"Error: {str(e)}")
         exit(1)
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ services:
       - ./utils:/app/utils
     depends_on:
       - migrations
+      # - test_api
 
   database:
     image: postgres:17
@@ -59,6 +60,16 @@ services:
     depends_on:
       database:
         condition: service_healthy
+
+  # test_api:
+  #   build:
+  #     context: test_api
+  #     dockerfile: Dockerfile
+  #   container_name: test_api_service
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "8000:8000"
 
 volumes:
   postgres_data:

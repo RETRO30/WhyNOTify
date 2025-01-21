@@ -47,6 +47,7 @@ class StickersApi:
             try:
                 proxy = await Proxy.get_by_account(self.account)
                 self.http_session = HttpAsyncClient(proxy=get_proxy_string(proxy))
+                # self.http_session = HttpAsyncClient()
             except Exception as e:
                 logger.error(f"{self.account} | Error setting up HTTP session: {e}")
                 await send_tech_messages(f"{self.account} | Error setting up HTTP session: {e}")
@@ -86,6 +87,7 @@ class StickersApi:
             await send_tech_messages(f"{self.account} | HTTP session is not set up")
             return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION)
         url = f"{self.BASE_URL}/collections"
+        # url = "http://test_api:8000/api/v1/collections"
         headers = self.headers
         response = await self.http_session.get(url, headers=headers)
         if response.status_code == 200:

@@ -113,7 +113,7 @@ async def stickerpack_text(data) -> Response:
     return Response(Status.SUCCESS, Description.OK, data=text)
 
 async def send_message_about_sticker(channel_id, collection):
-    response: Response = await stickerpack_text(collection)
+    response: Response = await sticker_text(collection)
     if response.status == Status.ERROR:
         return response
     alert_text = "🚨 🚨 🚨 🚨 🚨 🚨 🚨 🚨 🚨 "
