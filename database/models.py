@@ -204,7 +204,6 @@ class Stickerpack(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     pack_id = Column(String(100), nullable=False)
-    type = Column(Enum(ChannelType), nullable=False)
 
     def __str__(self):
         return f"Stickerpack(pack_id={self.pack_id})"
@@ -213,9 +212,9 @@ class Stickerpack(Base):
         return f"Stickerpack(pack_id={self.pack_id})"
 
     @staticmethod
-    async def add(name: str, pack_id: str, type: ChannelType):
+    async def add(name: str, pack_id: str):
         async with async_session() as session:
-            new_pack = Stickerpack(name=name, pack_id=pack_id, type=type)
+            new_pack = Stickerpack(name=name, pack_id=pack_id)
             session.add(new_pack)
             await session.commit()
             return new_pack
