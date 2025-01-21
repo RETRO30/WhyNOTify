@@ -8,7 +8,8 @@ from notifications.bot import send_messages, send_tech_messages, send_tech_colle
 from notifications.schemas import Response, Status, Description
 from utils.logger import logger
 
-first_check = True
+first_check_stickers = True
+first_chack_stickerpacks = True
 
 class Worker:
     def __init__(self, account: Account):
@@ -27,7 +28,7 @@ class Worker:
             return response
         
     async def task_stickers(self):
-        global first_check
+        global first_check_stickers
         last_collection = await Collection.get_last(type=CollectionType.STICKERS)
         
         response: Response = await self.stickers.check_updates(last_collections=last_collection)
@@ -37,12 +38,13 @@ class Worker:
             logger.error(f"{self.account} | Error checking updates: {response.description}")
             return response
         await send_messages(collection=response.data)
-        if first_check:
+        if first_check_stickers:
             await send_tech_collections_message(collection=response.data)
-            first_check = False
+            first_check_stickers = False
         return response
         
     async def task_stickerpacks(self):
+        global first_check_stickers
         stickerpacks: Tuple[Stickerpack] | None = await Stickerpack.get_all()
         
         if stickerpacks is None:
@@ -57,9 +59,9 @@ class Worker:
                 logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
                 return response
             await send_messages(collection=response.data)
-            if first_check:
+            if first_check_stickers:
                 await send_tech_collections_message(collection=response.data)
-                first_check = False
+                first_check_stickers = False
             return response
                 
         
