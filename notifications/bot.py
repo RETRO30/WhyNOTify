@@ -19,8 +19,7 @@ STICERPACK_TEXT = """Новый пак от <b>{name}</b>
 
 <b>Цена: {price}</b>
 <b>Количество стикеров в паке: {count_stickers}</b> 
-<b>Всего паков: {supply}</b>
-<b>Доступно: {left}</b>
+<b>Доступно: {left}/{supply}</b>
 
 👉 <a href="https://t.me/sticker_bot?start=_tgr_xR9FQYA4ZGEy">Зайти в приложение</a>
 
@@ -165,6 +164,15 @@ async def send_tech_collections_message(collection: Collection):
     channels = await Channel.get_all()
     for coll in collection.current_json:
         text += f"{coll['title']} - {coll['status']}\n"
+    for channel in channels:
+        if channel.type == ChannelType.TECHNICAL:
+            await send_message_to_telegram(chat_id=channel.channel_id, text=text)
+            
+async def send_tech_stickerpacks_message(collection: Collection):
+    text = ""
+    channels = await Channel.get_all()
+    for coll in collection.current_json:
+        text += f"{coll['name']} - {coll['price']} - {coll['left']}/{coll['supply']}\n"
     for channel in channels:
         if channel.type == ChannelType.TECHNICAL:
             await send_message_to_telegram(chat_id=channel.channel_id, text=text)
