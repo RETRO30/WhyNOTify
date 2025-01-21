@@ -241,7 +241,7 @@ class Stickerpack(Base):
 
 class CollectionType(enum.Enum):
     STICKERS = "stickers"
-    STICERPACKS = "stickerpacks"
+    STICKERPACKS = "stickerpacks"
 
 
 class Collection(Base):
