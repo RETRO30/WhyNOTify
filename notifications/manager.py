@@ -50,7 +50,7 @@ class Worker:
         for stickerpack in stickerpacks:
             last_collection = await Collection.get_last(type=CollectionType.STICKERPACKS, addtional_data=str(stickerpack.pack_id))
             
-            response: Response = await self.stickers.check_update_stickerpacks(last_collections=last_collection)
+            response: Response = await self.stickers.check_update_stickerpacks(id=stickerpack.pack_id, last_collections=last_collection)
             
             if response.status == Status.ERROR:
                 await send_tech_messages(f"{self.account} | Error checking updates stickerpacks: {response.description}")
@@ -70,12 +70,7 @@ class Worker:
             return response
         
         response: Response = await self.task_stickerpacks()
-        if response.status == Status.ERROR:
-            return response
-        
-        if response.status == Status.SUCCESS:
-            return response
-            
+        return response
             
             
 class WorkerManager:

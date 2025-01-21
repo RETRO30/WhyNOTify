@@ -122,7 +122,7 @@ class StickersApi:
             try:
                 data = response.json()
                 if data["ok"]:
-                    logger.success(f"{self.account} | Stickerpacks by {id} received successfully {len(data['data'])}")
+                    logger.success(f"{self.account} | Stickerpacks by {id} received successfully {len(data['data']["characters"])}")
                     return Response(Status.SUCCESS, Description.OK, data["data"]["characters"])
             except Exception as e:
                 logger.error(f"{self.account} | Error getting stickerpacks: {e}")
