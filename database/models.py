@@ -263,7 +263,7 @@ class Collection(Base):
     @staticmethod
     async def add(new_json: list, update_json: list, current_json: list, type: CollectionType, additional_data: str = ""):
         async with async_session() as session:
-            last_collection = await session.scalar(select(Collection).where(Collection.type == type).order_by(Collection.id.desc()).limit(1))
+            last_collection = await session.scalar(select(Collection).where(Collection.type == type).where(Collection.additional_data == additional_data).order_by(Collection.id.desc()).limit(1))
             new_collection = Collection(new_json=new_json,
                                         update_json=update_json,
                                         current_json=current_json,

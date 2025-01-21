@@ -1,3 +1,4 @@
+import asyncio
 from typing import List
 import httpx
 from database.models import Channel, ChannelType, Collection, CollectionType
@@ -15,13 +16,12 @@ STICKER_TEXT = """Новая коллекция от <b>{title}</b> <a href="{co
 
 Made by <a href="https://t.me/maxshitpostit">Max</a>"""
 
-
-STICERPACK_TEXT = """Новый пак от <b>{name}</b> 
-
+STICERPACK_TEXT_INFO = """Новый пак <b>{name}</b> от <b>{title}</b>
 <b>Цена: {price}</b>
 <b>Количество стикеров в паке: {count_stickers}</b> 
-<b>Доступно: {left}/{supply}</b>
+<b>Доступно: {left}/{supply}</b>\n\n"""
 
+STICERPACK_TEXT = """{data}
 👉 <a href="https://t.me/sticker_bot?start=_tgr_xR9FQYA4ZGEy">Зайти в приложение</a>
 
 ⭐️ <a href="https://split.tg/?ref=UQAy9M0k3azm-1dqajatwKLzrtAUIqmZFmIq-OpekOUEhoCY">Купить звезды</a>
@@ -47,8 +47,8 @@ class StickerInfo:
             await send_tech_messages(text=f"Error parsing sticker info: {e}")
             logger.error(f"Error parsing sticker info: {e}")
             return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
-        
-        
+
+
 class StickerPackInfo:
 
     def __init__(self, data: dict):
@@ -58,9 +58,10 @@ class StickerPackInfo:
         self.supply: str = None
         self.left: str = None
         self.count_stickers: str = None
-        
+
     async def parse(self) -> Response:
         try:
+            self.title = self.data["title"]
             self.name = self.data["name"]
             self.price = str(self.data["price"])
             self.supply = str(self.data["supply"])
@@ -73,23 +74,21 @@ class StickerPackInfo:
             return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
 
 
-
 async def send_message_to_telegram(chat_id, text, parse_mode="HTML"):
     url = f"https://api.telegram.org/bot{Config.telegram_bot.notification_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": text, "parse_mode": parse_mode}
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, json=payload)
-            if response.status_code != 200:
-                logger.error(f"Failed to send message: {response.json()}")
-        except Exception as e:
-            logger.error(f"Error sending message: {e}")
+    try:
+        response = await httpx.AsyncClient().post(url, json=payload)
+        if response.status_code != 200:
+            logger.error(f"Failed to send message: {response.json()}")
+    except Exception as e:
+        logger.error(f"Error sending message: {e}")
 
 
 async def sticker_text(data) -> Response:
     sticker_info = StickerInfo(data)
     response: Response = await sticker_info.parse()
-    
+
     if response.status == Status.ERROR:
         return response
 
@@ -98,19 +97,27 @@ async def sticker_text(data) -> Response:
                                status=sticker_info.status)
     return Response(Status.SUCCESS, Description.OK, data=text)
 
-async def stickerpack_text(data) -> Response:
-    stickerpack_info = StickerPackInfo(data)
-    response: Response = await stickerpack_info.parse()
-    
-    if response.status == Status.ERROR:
-        return response
 
-    text = STICERPACK_TEXT.format(name=stickerpack_info.name,
-                                  price=stickerpack_info.price,
-                                  count_stickers=stickerpack_info.count_stickers,
-                                  supply=stickerpack_info.supply,
-                                  left=stickerpack_info.left)
+async def stickerpack_text(data) -> Response:
+    stickers_text = ""
+    for pack in data:
+        stickerpack_info = StickerPackInfo(pack)
+        response: Response = await stickerpack_info.parse()
+
+        if response.status == Status.ERROR:
+            return response
+        
+        stickers_text += STICERPACK_TEXT_INFO.format(name=stickerpack_info.name,
+                                            title=stickerpack_info.title,
+                                            price=stickerpack_info.price,
+                                            count_stickers=stickerpack_info.count_stickers,
+                                            left=stickerpack_info.left,
+                                            supply=stickerpack_info.supply)
+    
+
+    text = STICERPACK_TEXT.format(data=stickers_text)
     return Response(Status.SUCCESS, Description.OK, data=text)
+
 
 async def send_message_about_sticker(channel_id, collection):
     response: Response = await sticker_text(collection)
@@ -121,8 +128,9 @@ async def send_message_about_sticker(channel_id, collection):
     await send_message_to_telegram(chat_id=channel_id, text=alert_text)
     await send_message_to_telegram(chat_id=channel_id, text=response.data)
     await send_message_to_telegram(chat_id=channel_id, text=alert_text)
-    
-async def send_message_about_stickerpacks(channel_id, collection):
+
+
+async def send_message_about_stickerpacks(channel_id, collection: list):
     response: Response = await stickerpack_text(collection)
     if response.status == Status.ERROR:
         return response
@@ -131,6 +139,7 @@ async def send_message_about_stickerpacks(channel_id, collection):
     await send_message_to_telegram(chat_id=channel_id, text=alert_text)
     await send_message_to_telegram(chat_id=channel_id, text=response.data)
     await send_message_to_telegram(chat_id=channel_id, text=alert_text)
+    return Response(Status.SUCCESS, Description.OK)
 
 
 async def send_messages(collection: Collection):
@@ -146,10 +155,17 @@ async def send_messages(collection: Collection):
                     await send_message_about_sticker(channel_id=channel.channel_id, collection=coll)
                     
     if collection.type == CollectionType.STICKERPACKS:
-        for coll in collection.new_json:
-            for channel in channels:
-                if channel.type == ChannelType.STICKERS:
-                    await send_message_about_stickerpacks(channel_id=channel.channel_id, collection=coll)
+        if len(collection.new_json) == 0:
+            return
+        logger.debug(f"Send messages for stickerpacks: {len(collection.new_json)}")
+        for channel in channels:
+            if channel.type == ChannelType.STICKERS:
+                response: Response = await send_message_about_stickerpacks(channel_id=channel.channel_id, collection=collection.new_json)
+                if response.status == Status.ERROR:
+                    logger.error(f"Error sending message: {response.data}")
+            
+                        
+            
 
 
 async def send_tech_messages(text: str):
@@ -158,8 +174,8 @@ async def send_tech_messages(text: str):
     for channel in channels:
         if channel.type == ChannelType.TECHNICAL:
             await send_message_to_telegram(chat_id=channel.channel_id, text=text)
-            
-            
+
+
 async def send_tech_collections_message(collection: Collection):
     text = ""
     channels = await Channel.get_all()
@@ -168,7 +184,8 @@ async def send_tech_collections_message(collection: Collection):
     for channel in channels:
         if channel.type == ChannelType.TECHNICAL:
             await send_message_to_telegram(chat_id=channel.channel_id, text=text)
-            
+
+
 async def send_tech_stickerpacks_message(collections: List[Collection]):
     text = ""
     channels = await Channel.get_all()

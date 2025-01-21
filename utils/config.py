@@ -32,6 +32,7 @@ class Config:
     database: Database
     telegram_api: TelegramAPI
     telegram_bot: TelegramBot
+    test: bool
 
     
 def setup_config():
@@ -56,7 +57,8 @@ def setup_config():
             admin_token=env.str("ADMIN_BOT_TOKEN"),
             admins=env.list("ADMIN_IDS"),
             notification_token=env.str("NOTIFICATION_BOT_TOKEN")
-        )
+        ),
+        test=env.bool("TEST")
     )
     return config
     

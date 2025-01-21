@@ -265,7 +265,7 @@ async def main():
         # Запускаем бота
         await dp.start_polling(bot)
     except Exception as e:
-        logger.error(f"Error: {e}")
+        logger.error(f"Error: {str(e)}")
     finally:
         logger.info("Bot stopped.")
 

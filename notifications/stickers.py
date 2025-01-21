@@ -46,8 +46,10 @@ class StickersApi:
         if self.http_session is None:
             try:
                 proxy = await Proxy.get_by_account(self.account)
-                self.http_session = HttpAsyncClient(proxy=get_proxy_string(proxy))
-                # self.http_session = HttpAsyncClient()
+                if Config.test:
+                    self.http_session = HttpAsyncClient()
+                else:
+                    self.http_session = HttpAsyncClient(proxy=get_proxy_string(proxy))
             except Exception as e:
                 logger.error(f"{self.account} | Error setting up HTTP session: {e}")
                 await send_tech_messages(f"{self.account} | Error setting up HTTP session: {e}")
@@ -87,7 +89,6 @@ class StickersApi:
             await send_tech_messages(f"{self.account} | HTTP session is not set up")
             return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION)
         url = f"{self.BASE_URL}/collections"
-        # url = "http://test_api:8000/api/v1/collections"
         headers = self.headers
         response = await self.http_session.get(url, headers=headers)
         if response.status_code == 200:
@@ -118,6 +119,8 @@ class StickersApi:
             await send_tech_messages(f"{self.account} | HTTP session is not set up")
             return Response(Status.ERROR, Description.ERROR_SETTING_UP_HTTP_SESSION)
         url = f"{self.BASE_URL}/collection/{id}"
+        if Config.test:
+            url = "http://test_api:8000/api/v1/collection/8"
         headers = self.headers
         response = await self.http_session.get(url, headers=headers)
         if response.status_code == 200:
@@ -125,7 +128,7 @@ class StickersApi:
                 data = response.json()
                 if data["ok"]:
                     logger.success(f"{self.account} | Stickerpacks by {id} received successfully {len(data['data']["characters"])}")
-                    return Response(Status.SUCCESS, Description.OK, data["data"]["characters"])
+                    return Response(Status.SUCCESS, Description.OK, data["data"])
             except Exception as e:
                 logger.error(f"{self.account} | Error getting stickerpacks: {e}")
                 await send_tech_messages(f"{self.account} | Error getting stickerpacks: {e}")
@@ -168,14 +171,15 @@ class Stickers:
             return Response(Status.ERROR, Description.SESSION_EXPIRED)
 
         auth_data: AuthData = response.data
-        try:
-            response: Response = await self.api.auth(auth_data=auth_data)
-            if response.status == Status.ERROR:
-                return response
-        except Exception as e:
-            logger.error(f"{self.account} | Error setting up stickers: {e}")
-            await send_tech_messages(f"{self.account} | Error setting up stickers: {e}")
-            return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
+        if not Config.test:
+            try:
+                response: Response = await self.api.auth(auth_data=auth_data)
+                if response.status == Status.ERROR:
+                    return response
+            except Exception as e:
+                logger.error(f"{self.account} | Error setting up stickers: {e}")
+                await send_tech_messages(f"{self.account} | Error setting up stickers: {e}")
+                return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
         return Response(Status.SUCCESS, Description.OK)
 
     async def check_updates(self, last_collections: Collection | None) -> Response:
@@ -225,7 +229,10 @@ class Stickers:
         if last_collections is None:
             db_collection = await Collection.add(new_json=new, update_json=update, current_json=response.data, type=CollectionType.STICKERPACKS, additional_data=str(id))
             return Response(Status.SUCCESS, Description.OK, data=db_collection)
-        stickerpacks = response.data
+        stickerpacks = response.data["characters"]
+        
+        for stickerpack in stickerpacks:
+            stickerpack['title'] = response.data['collection']['title']
         if stickerpacks is None:
             await send_tech_messages(f"{self.account} | Stickerpacks is None")
             return Response(Status.ERROR, Description.INVALID_RESPONSE)

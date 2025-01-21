@@ -12,7 +12,8 @@ services:
       - ./database:/app/database  # Общий модуль database
       - ./utils:/app/utils
     depends_on:
-      - migrations
+      database:
+        condition: service_healthy
 
   notifications:
     build:
@@ -25,8 +26,8 @@ services:
       - ./database:/app/database  # Общий модуль database
       - ./utils:/app/utils
     depends_on:
-      - migrations
-      # - test_api
+      database:
+        condition: service_healthy
 
   database:
     image: postgres:17
@@ -46,31 +47,17 @@ services:
       timeout: 10s
       retries: 5
 
-  migrations:
+  test_api:
     build:
-      context: migrations
+      context: test_api
       dockerfile: Dockerfile
-    container_name: migrations_service
+    container_name: test_api_service
+    volumes:
+      - ./utils:/app/utils
     env_file:
       - .env
-    volumes:
-      - migrations_data:/app/migrations/versions
-      - ./database:/app/database
-      - ./utils:/app/utils
-    depends_on:
-      database:
-        condition: service_healthy
-
-  # test_api:
-  #   build:
-  #     context: test_api
-  #     dockerfile: Dockerfile
-  #   container_name: test_api_service
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "8000:8000"
+    ports:
+      - "8000:8000"
 
 volumes:
   postgres_data:
-  migrations_data:

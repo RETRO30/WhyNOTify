@@ -1,11 +1,13 @@
 import asyncio
 from collections import deque
 from datetime import datetime
+import traceback
 from typing import List, Tuple
 from database.models import Account, Collection, CollectionType, Stickerpack
 from notifications.stickers import Stickers
 from notifications.bot import send_messages, send_tech_messages, send_tech_collections_message, send_tech_stickerpacks_message
 from notifications.schemas import Response, Status, Description
+from utils.config import Config
 from utils.logger import logger
 
 first_check_stickers = True
@@ -36,6 +38,9 @@ class Worker:
         response: Response = await self.stickers.check_updates(last_collections=last_collection)
         
         if response.status == Status.ERROR:
+            if response.description == Description.SESSION_EXPIRED:
+                logger.error(f"{self.account} | Error checking updates: {response.description}")
+                return response
             await send_tech_messages(f"{self.account} | Error checking updates: {response.description}")
             logger.error(f"{self.account} | Error checking updates: {response.description}")
             return response
@@ -62,6 +67,9 @@ class Worker:
             response: Response = await self.stickers.check_update_stickerpacks(id=stickerpack.pack_id, last_collections=last_collection)
             
             if response.status == Status.ERROR:
+                if response.description == Description.SESSION_EXPIRED:
+                    logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
+                    return response
                 await send_tech_messages(f"{self.account} | Error checking updates stickerpacks: {response.description}")
                 logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
                 return response
@@ -82,9 +90,12 @@ class Worker:
         
     
     async def task(self):
-        response: Response = await self.task_stickers()
-        if response.status == Status.ERROR:
-            return response
+        if not Config.test:
+            response: Response = await self.task_stickers()
+            if response.status == Status.ERROR:
+                return response
+        
+        
         
         response: Response = await self.task_stickerpacks()
         return response
@@ -170,6 +181,7 @@ class WorkerManager:
                 await asyncio.sleep(self.request_delay)
             except Exception as e:
                 logger.error(f"Error in worker {worker.account}: {str(e)}")
+                logger.debug(f"Error in worker {worker.account}: {traceback.format_exc()}")
                 await send_tech_messages(f"Error in worker {worker.account}: {str(e)}")
                 await self.replace_worker(worker)
                 break

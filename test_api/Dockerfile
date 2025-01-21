@@ -5,7 +5,7 @@ FROM python:3.12
 WORKDIR /app
 
 # Устанавливаем зависимости
-RUN pip install flask
+RUN pip install flask loguru environs
 
 # Копируем код
 COPY . ./test_api
