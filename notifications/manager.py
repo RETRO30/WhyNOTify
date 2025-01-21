@@ -54,7 +54,7 @@ class Worker:
         if stickerpacks is None:
             return Response(Status.SUCCESS, Description.OK)
         check = first_check_stickers
-        checks = [check] * len(stickerpacks)
+        checks = [check] * len(list(stickerpacks))
         index = 0
         for stickerpack in stickerpacks:
             last_collection = await Collection.get_last(type=CollectionType.STICKERPACKS, addtional_data=str(stickerpack.pack_id))
