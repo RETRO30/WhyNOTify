@@ -168,10 +168,14 @@ class Stickers:
             return Response(Status.ERROR, Description.SESSION_EXPIRED)
 
         auth_data: AuthData = response.data
-
-        response: Response = await self.api.auth(auth_data=auth_data)
-        if response.status == Status.ERROR:
-            return response
+        try:
+            response: Response = await self.api.auth(auth_data=auth_data)
+            if response.status == Status.ERROR:
+                return response
+        except Exception as e:
+            logger.error(f"{self.account} | Error setting up stickers: {e}")
+            await send_tech_messages(f"{self.account} | Error setting up stickers: {e}")
+            return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
         return Response(Status.SUCCESS, Description.OK)
 
     async def check_updates(self, last_collections: Collection | None) -> Response:
