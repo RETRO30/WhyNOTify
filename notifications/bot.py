@@ -145,7 +145,7 @@ async def send_messages(collection: Collection):
                 if channel.type == ChannelType.STICKERS:
                     await send_message_about_sticker(channel_id=channel.channel_id, collection=coll)
                     
-    if collection.type == CollectionType.STICERPACKS:
+    if collection.type == CollectionType.STICKERPACKS:
         for coll in collection.new_json:
             for channel in channels:
                 if channel.type == ChannelType.STICKERS:
