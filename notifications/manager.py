@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Tuple
 from database.models import Account, Collection, CollectionType, Stickerpack
 from notifications.stickers import Stickers
-from notifications.bot import send_messages, send_tech_messages, send_tech_collections_message
+from notifications.bot import send_messages, send_tech_messages, send_tech_collections_message, send_tech_stickerpacks_message
 from notifications.schemas import Response, Status, Description
 from utils.logger import logger
 
@@ -60,7 +60,7 @@ class Worker:
                 return response
             await send_messages(collection=response.data)
             if first_check_stickers:
-                await send_tech_collections_message(collection=response.data)
+                await send_tech_stickerpacks_message(collection=response.data)
                 first_check_stickers = False
             return response
                 
