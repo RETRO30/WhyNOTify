@@ -44,7 +44,7 @@ class Worker:
         return response
         
     async def task_stickerpacks(self):
-        global first_check_stickers
+        global first_chack_stickerpacks
         stickerpacks: Tuple[Stickerpack] | None = await Stickerpack.get_all()
         
         if stickerpacks is None:
@@ -59,9 +59,9 @@ class Worker:
                 logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
                 return response
             await send_messages(collection=response.data)
-            if first_check_stickers:
+            if first_chack_stickerpacks:
                 await send_tech_stickerpacks_message(collection=response.data)
-                first_check_stickers = False
+                first_chack_stickerpacks = False
             return response
                 
         
