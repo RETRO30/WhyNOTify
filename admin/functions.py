@@ -182,6 +182,7 @@ async def admin_panel_keyboard():
     keyboard = InlineKeyboardBuilder()
     keyboard.row(InlineKeyboardButton(text="Channels", callback_data="channels:1"))
     keyboard.row(InlineKeyboardButton(text="Accounts", callback_data="accounts:1"))
+    keyboard.row(InlineKeyboardButton(text="Stickerpacks", callback_data="stickerpacks:1"))
     return keyboard.as_markup()
 
 
