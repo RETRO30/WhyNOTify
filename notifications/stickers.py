@@ -226,10 +226,11 @@ class Stickers:
         response: Response = await self.api.get_stickerpacks(id=id)
         if response.status == Status.ERROR:
             return response
-        if last_collections is None:
-            db_collection = await Collection.add(new_json=new, update_json=update, current_json=response.data, type=CollectionType.STICKERPACKS, additional_data=str(id))
-            return Response(Status.SUCCESS, Description.OK, data=db_collection)
         stickerpacks = response.data["characters"]
+        if last_collections is None:
+            db_collection = await Collection.add(new_json=new, update_json=update, current_json=stickerpacks, type=CollectionType.STICKERPACKS, additional_data=str(id))
+            return Response(Status.SUCCESS, Description.OK, data=db_collection)
+        
         
         for stickerpack in stickerpacks:
             stickerpack['title'] = response.data['collection']['title']
