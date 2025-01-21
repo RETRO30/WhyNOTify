@@ -1,3 +1,4 @@
+from typing import List
 import httpx
 from database.models import Channel, ChannelType, Collection, CollectionType
 from notifications.schemas import Description, Response, Status
@@ -168,11 +169,12 @@ async def send_tech_collections_message(collection: Collection):
         if channel.type == ChannelType.TECHNICAL:
             await send_message_to_telegram(chat_id=channel.channel_id, text=text)
             
-async def send_tech_stickerpacks_message(collection: Collection):
+async def send_tech_stickerpacks_message(collections: List[Collection]):
     text = ""
     channels = await Channel.get_all()
-    for coll in collection.current_json:
-        text += f"{coll['name']} - {coll['price']} - {coll['left']}/{coll['supply']}\n"
+    for collection in collections:
+        for coll in collection.current_json:
+            text += f"{coll['name']} - {coll['price']} - {coll['left']}/{coll['supply']}\n"
     for channel in channels:
         if channel.type == ChannelType.TECHNICAL:
             await send_message_to_telegram(chat_id=channel.channel_id, text=text)

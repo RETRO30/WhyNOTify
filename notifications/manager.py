@@ -67,12 +67,12 @@ class Worker:
                 return response
             await send_messages(collection=response.data)
             
-            tech_data.extend(response.data)
+            tech_data.append(response.data)
         
         if first_chack_stickerpacks:
             async with FirstMessageSemaphore:
                 if first_chack_stickerpacks:
-                    await send_tech_stickerpacks_message(collection=response.data)
+                    await send_tech_stickerpacks_message(collections=response.data)
                     first_chack_stickerpacks = False
 
         return Response(Status.SUCCESS, Description.OK)
