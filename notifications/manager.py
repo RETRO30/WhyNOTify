@@ -56,6 +56,8 @@ class Worker:
         
         tech_data = []
         
+        print(stickerpacks)
+        
         for stickerpack in stickerpacks:
             last_collection = await Collection.get_last(type=CollectionType.STICKERPACKS, addtional_data=str(stickerpack.pack_id))
             
@@ -72,7 +74,7 @@ class Worker:
         if first_chack_stickerpacks:
             async with FirstMessageSemaphore:
                 if first_chack_stickerpacks:
-                    await send_tech_stickerpacks_message(collections=response.data)
+                    await send_tech_stickerpacks_message(collections=tech_data)
                     first_chack_stickerpacks = False
 
         return Response(Status.SUCCESS, Description.OK)
