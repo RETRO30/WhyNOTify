@@ -47,17 +47,17 @@ services:
       timeout: 10s
       retries: 5
 
-  test_api:
-    build:
-      context: test_api
-      dockerfile: Dockerfile
-    container_name: test_api_service
-    volumes:
-      - ./utils:/app/utils
-    env_file:
-      - .env
-    ports:
-      - "8000:8000"
+  # test_api:
+  #   build:
+  #     context: test_api
+  #     dockerfile: Dockerfile
+  #   container_name: test_api_service
+  #   volumes:
+  #     - ./utils:/app/utils
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "8000:8000"
 
 volumes:
   postgres_data:
