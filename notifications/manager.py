@@ -53,9 +53,9 @@ class Worker:
         
         if stickerpacks is None:
             return Response(Status.SUCCESS, Description.OK)
-        check = first_check_stickers
-        checks = [check] * len(list(stickerpacks))
-        index = 0
+        
+        tech_data = []
+        
         for stickerpack in stickerpacks:
             last_collection = await Collection.get_last(type=CollectionType.STICKERPACKS, addtional_data=str(stickerpack.pack_id))
             
@@ -66,16 +66,13 @@ class Worker:
                 logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
                 return response
             await send_messages(collection=response.data)
-            if checks[index]:
-                async with FirstMessageSemaphore:
-                    if checks[index]:
-                        await send_tech_stickerpacks_message(stickerpack=stickerpack, collection=response.data)
-                        checks[index] = False
-                index += 1
-                
+            
+            tech_data.extend(response.data)
+        
         if first_chack_stickerpacks:
             async with FirstMessageSemaphore:
-                if not any(checks):
+                if first_chack_stickerpacks:
+                    await send_tech_stickerpacks_message(collection=response.data)
                     first_chack_stickerpacks = False
 
         return Response(Status.SUCCESS, Description.OK)
