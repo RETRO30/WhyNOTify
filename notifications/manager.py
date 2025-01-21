@@ -11,6 +11,8 @@ from utils.logger import logger
 first_check_stickers = True
 first_chack_stickerpacks = True
 
+FirstMessageSemaphore = asyncio.Semaphore(1)
+
 class Worker:
     def __init__(self, account: Account):
         self.account = account
@@ -39,8 +41,10 @@ class Worker:
             return response
         await send_messages(collection=response.data)
         if first_check_stickers:
-            await send_tech_collections_message(collection=response.data)
-            first_check_stickers = False
+            async with FirstMessageSemaphore:
+                if first_check_stickers:
+                    await send_tech_collections_message(collection=response.data)
+                    first_check_stickers = False
         return response
         
     async def task_stickerpacks(self):
@@ -60,8 +64,10 @@ class Worker:
                 return response
             await send_messages(collection=response.data)
             if first_chack_stickerpacks:
-                await send_tech_stickerpacks_message(collection=response.data)
-                first_chack_stickerpacks = False
+                async with FirstMessageSemaphore:
+                    if first_chack_stickerpacks:
+                        await send_tech_stickerpacks_message(collection=response.data)
+                        first_chack_stickerpacks = False
             return response
                 
         
@@ -76,7 +82,7 @@ class Worker:
             
             
 class WorkerManager:
-    def __init__(self, utilization_percent: int = 50):
+    def __init__(self, utilization_percent: int = 30):
         self.workers: List[Worker] = []
         self.account_queue = deque()
         self.active_workers = {}  # worker: last_error_time

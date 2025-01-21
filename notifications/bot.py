@@ -171,7 +171,6 @@ async def send_tech_collections_message(collection: Collection):
 async def send_tech_stickerpacks_message(collection: Collection):
     text = ""
     channels = await Channel.get_all()
-    print(collection.current_json)
     for coll in collection.current_json:
         text += f"{coll['name']} - {coll['price']} - {coll['left']}/{coll['supply']}\n"
     for channel in channels:
