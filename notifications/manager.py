@@ -56,8 +56,6 @@ class Worker:
         
         tech_data = []
         
-        print(stickerpacks)
-        
         for stickerpack in stickerpacks:
             last_collection = await Collection.get_last(type=CollectionType.STICKERPACKS, addtional_data=str(stickerpack.pack_id))
             
