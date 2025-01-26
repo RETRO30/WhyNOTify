@@ -211,7 +211,7 @@ class Stickers:
         for last_collection in last_collections.current_json:
             for collection in collections:
                 if last_collection["id"] == collection["id"]:
-                    if last_collection != collection:
+                    if last_collection["status"] != collection["status"]:
                         update.append(collection)
                         
 
