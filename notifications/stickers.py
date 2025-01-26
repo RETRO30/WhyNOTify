@@ -122,7 +122,11 @@ class StickersApi:
         if Config.test:
             url = "http://test_api:8000/api/v1/collection/8"
         headers = self.headers
-        response = await self.http_session.get(url, headers=headers)
+        try:
+            response = await self.http_session.get(url, headers=headers)
+        except Exception as e:
+            logger.error(f"{self.account} | Error getting stickerpacks: {e}")
+            return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
         if response.status_code == 200:
             try:
                 data = response.json()
@@ -137,6 +141,7 @@ class StickersApi:
             logger.error(f"{self.account} | Error getting stickerpacks: {response.status_code}, {response.text}")
             await send_tech_messages(f"{self.account} | Error getting stickerpacks: {response.status_code}, {response.text}")
             return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(response.text))
+        return Response(Status.ERROR, Description.INVALID_RESPONSE)
 
 
 class Stickers:
