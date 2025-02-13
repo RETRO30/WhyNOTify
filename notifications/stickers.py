@@ -13,7 +13,6 @@ def get_proxy_string(proxy: Proxy) -> str:
 
 
 class StickersApi:
-
     def __init__(self, account: Account):
         self.account: Account = account
         self.http_session = None

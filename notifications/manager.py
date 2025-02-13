@@ -69,13 +69,12 @@ class Worker:
             if response.status == Status.ERROR:
                 if response.description == Description.SESSION_EXPIRED:
                     logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
-                    return response
-                await send_tech_messages(f"{self.account} | Error checking updates stickerpacks: {response.description}")
-                logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
-                return response
-            await send_messages(collection=response.data)
-            
-            tech_data.append(response.data)
+                else:
+                    await send_tech_messages(f"{self.account} | Error checking updates stickerpacks: {response.description}")
+                    logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
+            elif response.status == Status.SUCCESS:
+                await send_messages(collection=response.data)
+                tech_data.append(response.data)
         
         if first_chack_stickerpacks:
             async with FirstMessageSemaphore:

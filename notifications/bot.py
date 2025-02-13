@@ -10,7 +10,7 @@ STICKER_TEXT = """Новая коллекция от <b>{title}</b> <a href="{co
 
 <b>Статус: {status}</b> 
 
-👉 <a href="https://t.me/sticker_bot?start=_tgr_xR9FQYA4ZGEy">Зайти в приложение</a>
+👉 <a href="https://t.me/sticker_bot">Зайти в приложение</a>
 
 ⭐️ <a href="https://split.tg/?ref=UQAy9M0k3azm-1dqajatwKLzrtAUIqmZFmIq-OpekOUEhoCY">Купить звезды</a>
 
@@ -22,7 +22,7 @@ STICERPACK_TEXT_INFO = """Новый пак <b>{name}</b> от <b>{title}</b>
 <b>Доступно: {left}/{supply}</b>\n\n"""
 
 STICERPACK_TEXT = """{data}
-👉 <a href="https://t.me/sticker_bot?start=_tgr_xR9FQYA4ZGEy">Зайти в приложение</a>
+👉 <a href="https://t.me/sticker_bot">Зайти в приложение</a>
 
 ⭐️ <a href="https://split.tg/?ref=UQAy9M0k3azm-1dqajatwKLzrtAUIqmZFmIq-OpekOUEhoCY">Купить звезды</a>
 
