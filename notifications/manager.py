@@ -34,9 +34,12 @@ class Worker:
     async def task_stickers(self):
         global first_check_stickers
         last_collection = await Collection.get_last(type=CollectionType.STICKERS)
-        
-        response: Response = await self.stickers.check_updates(last_collections=last_collection)
-        
+        try:
+            response: Response = await self.stickers.check_updates(last_collections=last_collection)
+        except Exception as e:
+            logger.error(f"{self.account} | Error checking updates: {e}")
+            await send_tech_messages(f"{self.account} | Error checking updates: {e}")
+            return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
         if response.status == Status.ERROR:
             if response.description == Description.SESSION_EXPIRED:
                 logger.error(f"{self.account} | Error checking updates: {response.description}")
@@ -63,9 +66,12 @@ class Worker:
         
         for stickerpack in stickerpacks:
             last_collection = await Collection.get_last(type=CollectionType.STICKERPACKS, addtional_data=str(stickerpack.pack_id))
-            
-            response: Response = await self.stickers.check_update_stickerpacks(id=stickerpack.pack_id, last_collections=last_collection)
-            
+            try:
+                response: Response = await self.stickers.check_update_stickerpacks(id=stickerpack.pack_id, last_collections=last_collection)
+            except Exception as e:
+                logger.error(f"{self.account} | Error checking updates stickerpacks: {e}")
+                await send_tech_messages(f"{self.account} | Error checking updates stickerpacks: {e}")
+                return Response(Status.ERROR, Description.INVALID_RESPONSE, data=str(e))
             if response.status == Status.ERROR:
                 if response.description == Description.SESSION_EXPIRED:
                     logger.error(f"{self.account} | Error checking updates stickerpacks: {response.description}")
@@ -83,8 +89,6 @@ class Worker:
                     first_chack_stickerpacks = False
 
         return Response(Status.SUCCESS, Description.OK)
-        
-            
                 
         
     
